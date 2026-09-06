@@ -9,7 +9,15 @@ design patterns, storage tiering, and schema-on-read architecture.
 
 ## Architecture
 
-See `/docs` for the full architecture diagram and console screenshots of each stage.
+```
+S3 (raw/)  →  Glue Crawler  →  Glue ETL Job (Visual)  →  S3 (curated/, Parquet)
+                                                              ↓
+                                                        Glue Crawler
+                                                              ↓
+                                                        Amazon Athena (SQL)
+```
+
+![Pipeline Overview](01-pipeline-overview.png)
 
 ## What it does
 
@@ -22,6 +30,9 @@ See `/docs` for the full architecture diagram and console screenshots of each st
 - Crawls the curated data so it's queryable via the **Glue Data Catalog**
 - Runs ad-hoc business SQL queries directly against S3 using **Amazon Athena** —
   no database server involved
+
+![Job Run Success](02-job-run-success.png)
+![Curated Output in S3](03-curated-output.png)
 
 ## Why this architecture
 
@@ -48,6 +59,13 @@ See `/docs` for the full architecture diagram and console screenshots of each st
 
 ## Repository structure
 
+```
+├── data/       raw dataset (CSV) used as pipeline input
+├── queries/    business_queries.sql — SQL queries run in Athena
+├── *.png       architecture and console screenshots
+└── README.md
+```
+
 ## Example business questions answered
 
 - Which product category generates the most revenue?
@@ -55,11 +73,16 @@ See `/docs` for the full architecture diagram and console screenshots of each st
 - Which shipping mode is used most, and how much revenue does it drive?
 - Which states generate the most sales?
 
-See `/queries/business_queries.sql` for the full SQL and `/docs` for screenshots of the
-query results.
+See `queries/business_queries.sql` for the full SQL.
+
+![Athena Category Query](04-athena-category-query.png)
+![Athena Ship Mode Query](05-athena-shipmode-query.png)
 
 ## Notes
 
 - Dataset: retail "Superstore"-style sales data sourced from Kaggle
 - Region: ap-south-1 (Mumbai)
 - Job runtime: ~1m 19s per run (10 DPUs, G.1X workers, Glue 5.1)
+- A few source columns carry a `#N` suffix (e.g. `ship_mode#4`) in the curated table —
+  an artifact from the Glue Crawler merging schema versions across multiple runs.
+  Queries referencing these columns use double-quoted identifiers.
